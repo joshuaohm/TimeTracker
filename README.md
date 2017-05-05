@@ -10,7 +10,9 @@ npm install
 composer install
 
 php artisan migrate
+
 php artisan db:seed --class=UsersTableSeeder
+
 php artisan db:seed --class=TasksTableSeeder
 
 gulp watch
