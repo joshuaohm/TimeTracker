@@ -4,7 +4,6 @@ module.exports = {
     path: "./public/js",
     filename: "app.js"
   },
-  externals: ['axios'],
   plugins: [
     new webpack.DefinePlugin({ //<--key to reduce React's size
       'process.env': {
