@@ -2,9 +2,9 @@
 A Time tracking app built in React
 
 
-# Front end files can be found in /resources/assets
+Front end files can be found in /resources/assets
 
-# If you have php, npm, composer installed all ready you can get this up and running via:
+If you have php, npm, composer installed all ready you can get this up and running via:
 
 npm install
 composer install
