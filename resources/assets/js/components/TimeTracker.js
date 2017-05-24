@@ -140,14 +140,11 @@ class TimeTracker extends Component {
         this.setState({tasks});
     }
 
-    handleDeleteButton(e){
+    handleDeleteButton(taskId){
 
         //Event when delete task button is clicked
 
-        e.preventDefault();
-
         var self = this;
-        var taskId = $(e.target).data('task');
 
         //open a new confirmation dialogue
         var confirm = function(message, options) {
@@ -181,13 +178,10 @@ class TimeTracker extends Component {
 
     }
 
-    handleTimerButton(e){
+    handleTimerButton(taskId){
 
         //Event when play button is clicked on a task
 
-        e.preventDefault();
-
-        var taskId = $(e.target).parents('.task').data('task');
         var newTasks = this.state.tasks;
         var clickTime = new Date().getTime();
 
@@ -212,14 +206,11 @@ class TimeTracker extends Component {
 
     }
 
-    handleSubmitButton(e){
+    handleSubmitButton(taskId){
 
         //Event when the upload button is clicked on an event
 
-        e.preventDefault();
-
         var self = this;
-        var taskId = $(e.target).data('task');
 
         //convert to 0-index
         taskId--;
@@ -348,9 +339,9 @@ class TimeTracker extends Component {
                             </div>
                         </div>
                         <div className="buttonHolder">
-                            <div className="upload-btn icon-upload-cloud" data-task={task.id} onClick={(event) => {this.handleSubmitButton(event)}}></div>
-                            <div className="timer-btn" data-state={ task.state } data-task={ task.id } onClick={(event) => {this.handleTimerButton(event)}}>{this.renderTimerButton(task.state)}</div>
-                            <div className="delete-btn icon-trash" data-task={task.id} onClick={(event) => {this.handleDeleteButton(event)}}></div>
+                            <div className="upload-btn icon-upload-cloud" data-task={task.id} onClick={(event) => {this.handleSubmitButton(task.id)}}></div>
+                            <div className="timer-btn" data-state={ task.state } data-task={ task.id } onClick={(event) => {this.handleTimerButton(task.id)}}>{this.renderTimerButton(task.state)}</div>
+                            <div className="delete-btn icon-trash" data-task={task.id} onClick={(event) => {this.handleDeleteButton(task.id)}}></div>
                         </div>
                     </div>
                 );
