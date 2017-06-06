@@ -11,8 +11,24 @@ class TimeTracker extends Component {
         super(props);
 
         this.state = {
-            tasks: []
+            tasks: [],
+            userId: '',
         };
+
+
+        //BIND EVENTS
+
+        this.handleAddTaskButton = this.handleAddTaskButton.bind(this);
+        this.handleDeleteButton = this.handleDeleteButton.bind(this);
+        this.handleHourChange = this.handleHourChange.bind(this);
+        this.handleMinuteChange = this.handleMinuteChange.bind(this);
+        this.handleSubmitButton = this.handleSubmitButton.bind(this);
+        this.handleTimerButton = this.handleTimerButton.bind(this);
+        this.handleTitleChange = this.handleTitleChange.bind(this);
+
+        this.onHourBlur = this.onHourBlur.bind(this);
+        this.onMinuteBlur = this.onMinuteBlur.bind(this);
+        this.onTitleBlur = this.onTitleBlur.bind(this);
     }
 
     componentDidMount(){
@@ -31,7 +47,7 @@ class TimeTracker extends Component {
                     tasks = this.parseTimes(tasks);
                 
                     
-                    this.setState({tasks});
+                    this.setState({tasks:tasks, userId:userId});
             });
         }
     }
@@ -72,26 +88,30 @@ class TimeTracker extends Component {
 
     deleteTask(taskId){
 
+        var self = this;
         var tasks = this.state.tasks;
-
-        tasks.splice(this.getTaskIndex(tasks, taskId), 1);
+        tasks.splice(this.getTaskIndex(taskId, tasks), 1);
         tasks = this.assignColors(tasks);
-        this.setState({tasks});
 
-        console.log(this.getTaskIndex(tasks, taskId));
+        this.setState({tasks}, function(){
+           self.postDeleteTask(taskId);
+        });
     }
 
-    getTaskIndex(tasks, taskId){
+    getTaskIndex(taskId, tasks){
 
         //Returns task's index in the task list
+        var index = -1;
 
         for(var i = 0; i < tasks.length; i++){
-            if(tasks[i].id === taskId){
-                return i;
+            if(tasks[i].id === parseInt(taskId)){
+                index = i;
+                console.log("Searching for "+taskId+" found "+tasks[i].id);
             }
         }
 
-        return -1;
+        console.log('index: '+index);
+        return index;
     }
 
     getActiveTask(){
@@ -112,39 +132,44 @@ class TimeTracker extends Component {
         //Event when add task button is clicked
 
         e.preventDefault();
+        var self = this;
 
-        if(this.state.tasks.length === 0){
+        if(self.state.tasks.length === 0){
             var taskId = 1;
         }
         else{
-            var taskId = this.state.tasks[this.state.tasks.length-1].id+1;
+            var taskId = self.state.tasks[self.state.tasks.length-1].id+1;
         }
         
         var title = "New Task";
         var duration = 0;
 
         var newTask = {
-            'ownerId': userId,
+            'ownerId': self.state.userId,
             'id': taskId,
             'title': title,
             'state': 'paused',
             'duration': 0
         }
-        var tasks = this.state.tasks;
+        var tasks = self.state.tasks;
 
 
 
         tasks.push(newTask);
-        tasks = this.assignColors(tasks);
-        tasks = this.parseTimes(tasks);
-        this.setState({tasks});
+        tasks = self.assignColors(tasks);
+        tasks = self.parseTimes(tasks);
+        self.setState({tasks}, function(){
+            var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
+            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+        });
     }
 
-    handleDeleteButton(taskId){
+    handleDeleteButton(e){
 
         //Event when delete task button is clicked
 
         var self = this;
+        var taskId = $(e.target).attr("data-task");
 
         //open a new confirmation dialogue
         var confirm = function(message, options) {
@@ -163,6 +188,7 @@ class TimeTracker extends Component {
               return wrapper.remove();
             });
           };
+
           return component.promise.always(cleanup).promise();
         };
 
@@ -178,42 +204,102 @@ class TimeTracker extends Component {
 
     }
 
-    handleTimerButton(taskId){
+    handleHourChange(e){
+
+        //Event when an task's hour value is edited
+
+        var taskId = $(e.target).attr("data-task");
+        var newHour = e.target.value;
+        console.log("new hour is: "+newHour);
+        var newTasks = this.state.tasks;
+        var taskIndex = this.getTaskIndex(taskId, newTasks);
+        var newTask = newTasks[taskIndex];
+
+        //Check if newHour is numeric, Format hour to leading zeros if less than 10, and get rid of negative values
+
+        if(isNaN(newHour) || newHour === ""){
+            newHour = isNaN(parseInt(newTask.hour)) ? "00" : newTask.hour;
+            e.target.value = newHour;
+        }
+
+        if(parseInt(newHour) < 0){
+            newHour = "00";
+            e.target.value = newHour;
+        }
+
+        newTask.hour = newHour;
+        newTask = this.parseTimeReverse(newTask);
+        newTasks[taskIndex] = newTask;
+
+        newTasks = this.parseTimes(newTasks);
+
+        this.setState({tasks: newTasks});        
+        
+    }
+
+    handleMinuteChange(e){
+
+        //Event when an task's hour value is edited
+
+        var taskId = $(e.target).attr("data-task");
+        var newMinute = e.target.value;
+        var newTasks = this.state.tasks;
+        var taskIndex = this.getTaskIndex(taskId, newTasks);
+        var newTask = newTasks[taskIndex];
+
+        //Check if newHour is numeric, Format hour to leading zeros if less than 10, and get rid of negative values
+
+        if(isNaN(newMinute) || newMinute === ""){
+            newMinute = isNaN(parseInt(newTask.minute)) ? "00" : newTask.minute;
+            e.target.value = newMinute;
+        }
+
+        if(parseInt(newMinute) < 0 || parseInt(newMinute) > 59 || newMinute.length > 2){
+            newMinute = isNaN(parseInt(newTask.minute)) ? "00" : newTask.minute;
+            e.target.value = newMinute;
+        }
+
+        newTask.minute = newMinute;
+        newTask = this.parseTimeReverse(newTask);
+        newTasks[taskIndex] = newTask;
+
+        newTasks = this.parseTimes(newTasks);
+
+        this.setState({tasks: newTasks});        
+        
+    }
+
+    handleTimerButton(e){
 
         //Event when play button is clicked on a task
 
+        var taskId = $(e.target).attr("data-task");
         var newTasks = this.state.tasks;
         var clickTime = new Date().getTime();
-
-        //convert to 0-index
-        taskId--;
 
         this.updateTasks("clicked", taskId, clickTime, newTasks);
     }
 
-    handleTitleChange(taskId){
+    handleTitleChange(e){
 
         //Event when an task's title is edited
-
+        var taskId = $(e.target).attr("data-task");
         var newTasks = this.state.tasks;
 
-        var newTitle = $('#title-'+taskId)[0].value;
+        var newTitle = e.target.value;
 
 
-        newTasks[taskId-1].title = newTitle;
-
-        this.setState({newTasks});        
+        newTasks[this.getTaskIndex(taskId, newTasks)].title = newTitle;
+        this.setState({tasks: newTasks});    
 
     }
 
-    handleSubmitButton(taskId){
+    handleSubmitButton(e){
 
         //Event when the upload button is clicked on an event
 
         var self = this;
-
-        //convert to 0-index
-        taskId--;
+        var taskId = $(e.target).attr("data-task");
 
         //open a new confirmation dialogue
         var confirm = function(message, options) {
@@ -246,7 +332,86 @@ class TimeTracker extends Component {
         })(this));
     }
 
-    
+    onHourBlur(e){
+
+        //Format hour value once focus is left (turn 0's into 00's and remove extra leading 0's)
+        var self = this;
+        var taskId = $(e.target).attr("data-task");
+        var newHour = e.target.value;
+        var newTasks = this.state.tasks;
+        var taskIndex = this.getTaskIndex(taskId, newTasks);
+        var newTask = newTasks[taskIndex];
+
+        if(parseInt(newHour) < 10 && newHour.charAt(0) != '0' || newHour === "0"){
+            newHour = "0" + newHour;
+            e.target.value = newHour;
+        }
+        else if(parseInt(newHour) > 9 && newHour.charAt(0) == '0'){
+            newHour = newHour.replace(/^0+/, '');
+            e.target.value = newHour;
+        }
+
+        newTask.hour = newHour;
+        newTask = self.parseTimeReverse(newTask);
+        newTasks[self.getTaskIndex(taskId, newTasks)] = newTask;
+
+        newTasks = self.parseTimes(newTasks);
+
+
+        self.setState({tasks: newTasks}, function(){
+
+            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+        });
+    }
+
+    onMinuteBlur(e){
+
+        //Format minute once focus is left (turn 0's into 00's)
+        var self = this;
+        var taskId = $(e.target).attr("data-task");
+        var newMinute = e.target.value;
+        var newTasks = this.state.tasks;
+        var taskIndex = self.getTaskIndex(taskId, newTasks);
+        var newTask = newTasks[taskIndex];
+
+        if(parseInt(newMinute) < 10 && newMinute.charAt(0) != '0' || newMinute === "0"){
+            newMinute = "0" + newMinute;
+            e.target.value = newMinute;
+        }
+
+        newTask.minute = newMinute;
+        newTask = self.parseTimeReverse(newTask);
+        newTasks[taskIndex] = newTask;
+
+        newTasks = self.parseTimes(newTasks);
+
+        self.setState({tasks: newTasks}, function(){
+
+            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+        });
+    }
+
+    onTitleBlur(e){
+
+        var self = this;
+        var taskId = $(e.target).attr("data-task");
+        var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
+
+        self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+    }
+
+    parseTimeReverse(task){
+
+        //Takes the task's current hour and minute values and converts that into the new duration (seconds)
+
+        //This will drop some seconds off an existing timer.
+        var hourSeconds = parseInt(task.hour) * 3600;
+        var minuteSeconds = parseInt(task.minute) * 60;
+
+        task.duration = hourSeconds + minuteSeconds;
+
+        return task;
+    }
 
     parseTimes(tasks){
 
@@ -257,11 +422,11 @@ class TimeTracker extends Component {
             tasks[i].hour = Math.floor(tasks[i].duration / 3600);
             tasks[i].minute = Math.floor((tasks[i].duration % 3600) / 60);
         
-            if(tasks[i].hour < 10){
+            if(parseInt(tasks[i].hour) < 10){
                 tasks[i].hour = "0"+tasks[i].hour;
             }
 
-            if(tasks[i].minute < 10){
+            if(parseInt(tasks[i].minute) < 10){
                 tasks[i].minute = "0"+tasks[i].minute;
             }
         }
@@ -274,22 +439,43 @@ class TimeTracker extends Component {
         //Pauses all tasks
 
         for(var i = 0; i < taskList.length; i++){
-            taskList[i].state = 'paused';
+            if(taskList[i].state === 'play'){
+                taskList[i].state = 'paused';
+                var currTime = new Date().getTime();
+                taskList = this.setTaskTime(i+1, currTime, taskList);
+            }         
         }
 
         return taskList;
     }
 
-    postTaskUpdate(userId, taskId, title, state, duration){
+    postDeleteTask(taskId){
+
+        var self = this;
+
+        $.ajax({
+            method: "POST",
+            url: "/api/task/delete",
+            data: {
+                "userId":self.state.userId,
+                "taskId": taskId
+            },
+            success: self.submitSucceeded,
+            dataType: "json"
+        });
+    }
+
+    postTaskUpdate(taskId, title, state, duration){
 
         //Post a task's information for updating in the DB
+        var self = this;
 
         $.ajax({
             method: "POST",
             url: "/api/task",
             data: {
-                "userId":userId,
-                "taskId": taskId+1,
+                "userId":self.state.userId,
+                "taskId": taskId,
                 "name": title,
                 "status": 'paused',
                 "duration": duration
@@ -302,13 +488,26 @@ class TimeTracker extends Component {
     render() {
 
         //Main render call of entire application
-
-        return (
-            <div className="tasks-list" id="main-window">
-                <div className="add-task" onClick={(event) => {this.handleAddTaskButton(event)}}>+</div>
-                { this.renderTasks() }
-            </div>
-        );
+        if(this.state.userId === -1){
+            return (
+                
+                    <div className="login-prompt" id="main-window">
+                        <a href="/login">
+                            Please Log in
+                        </a>
+                    </div>
+                
+            );
+        }
+        else{
+            return (
+                <div className="tasks-list" id="main-window">
+                    <div className="add-task" onClick={this.handleAddTaskButton}>+</div>
+                    { this.renderTasks() }
+                </div>
+            );
+        }
+        
     }
     
 
@@ -325,23 +524,34 @@ class TimeTracker extends Component {
                 return (
                     <div className={ "task color-"+task.color } key={ task.id } data-task={ task.id }>
                         <div className="title" data-task={ task.id }>
-                            <input type="text" id={"title-"+task.id }  
-                                onChange={()=>{this.handleTitleChange(task.id);}} 
+                            <input type="text" data-task={ task.id } id={"title-"+task.id }  
+                                onChange={this.handleTitleChange} 
+                                onBlur={this.onTitleBlur}
                                 defaultValue={task.title} />
                         </div>
                         <div className="time">
                             <div className="time-wrapper">
-                            <div className="hour" data-task={ task.id }><span>{ task.hour }</span></div>
+                                <div className="hour" data-task={ task.id }>
+                                    <input type="text" data-task={task.id} id={"hour-"+task.id }  
+                                        onChange={this.handleHourChange}
+                                        onBlur={this.onHourBlur}
+                                        defaultValue={task.hour} />
+                                </div>
                                 <div className="colon"> 
                                     <span className={"animation-colon "+task.state}>:</span>
                                 </div>
-                                <div className="minute" data-task={ task.id }><span>{ task.minute }</span></div>
+                                <div className="minute" data-task={ task.id }>
+                                    <input type="text" data-task={task.id} id={"minute-"+task.id }  
+                                        onChange={this.handleMinuteChange}
+                                        onBlur={this.onMinuteBlur}
+                                        defaultValue={task.minute} />
+                                </div>
                             </div>
                         </div>
                         <div className="buttonHolder">
-                            <div className="upload-btn icon-upload-cloud" data-task={task.id} onClick={(event) => {this.handleSubmitButton(task.id)}}></div>
-                            <div className="timer-btn" data-state={ task.state } data-task={ task.id } onClick={(event) => {this.handleTimerButton(task.id)}}>{this.renderTimerButton(task.state)}</div>
-                            <div className="delete-btn icon-trash" data-task={task.id} onClick={(event) => {this.handleDeleteButton(task.id)}}></div>
+                            <div className="upload-btn icon-upload-cloud" data-task={task.id} onClick={this.handleSubmitButton}></div>
+                            <div className="timer-btn" data-state={ task.state } data-task={ task.id } onClick={this.handleTimerButton}>{this.renderTimerButton(task.state, task.id)}</div>
+                            <div className="delete-btn icon-trash" data-task={task.id} onClick={this.handleDeleteButton}></div>
                         </div>
                     </div>
                 );
@@ -349,55 +559,61 @@ class TimeTracker extends Component {
         }
     }
 
-    renderTimerButton(state){
+    renderTimerButton(state, taskId){
 
         //Determines if a task's button should display as pause or play and renders it
 
         if(state === "play"){
             return(
-                <div className="icon-pause"></div>
+                <div className="icon-pause" data-task={taskId}></div>
             );        
         }
         else if(state === "paused"){
             return (
-                <div className="icon-play"></div>
+                <div className="icon-play" data-task={taskId}></div>
             );
         }
     }
 
-    setTaskStates(taskId, tasks){
+    setTaskState(taskId, tasks){
+
+        var taskIndex = this.getTaskIndex(taskId, tasks);
 
         if(tasks.length > 0){
-            if(tasks[taskId].state === 'play'){
-                tasks[taskId].state = 'paused';
+            if(tasks[taskIndex].state === 'play'){
+                tasks[taskIndex].state = 'paused';
             }
-            else if(tasks[taskId].state === 'paused'){
+            else if(tasks[taskIndex].state === 'paused'){
                 tasks = this.pauseAllTasks(tasks);
-                tasks[taskId].state = 'play';
+                tasks[taskIndex].state = 'play';
             }
         }
 
         return tasks;
     }
 
-    setTaskTimes(taskId, currTime, tasks){
+    setTaskTime(taskId, currTime, tasks){
+
+        console.log("set task time id: "+taskId);
+
+        var taskIndex = this.getTaskIndex(taskId, tasks);
 
         //Case 1, task was playing all ready, still playing
-        if(tasks[taskId].state === 'play' && Number.isInteger(tasks[taskId].startTime)){
+        if(tasks[taskIndex].state === 'play' && Number.isInteger(tasks[taskIndex].startTime)){
 
             //Smooth Sailing -- if there's an error at this part, do nothing.
-            if(tasks[taskId].startTime && !Number.isInteger(tasks[taskId].stopTime)){
-                tasks[taskId].stopTime = currTime;
+            if(tasks[taskIndex].startTime && !Number.isInteger(tasks[taskIndex].stopTime)){
+                tasks[taskIndex].stopTime = currTime;
                 tasks = this.updateTimerDuration(true, taskId, tasks);
             }
         }
         //Case 2, task was just started
-        else if(tasks[taskId].state === 'play' && !Number.isInteger(tasks[taskId].startTime) && !Number.isInteger(tasks[taskId].stopTime)){
-            tasks[taskId].startTime = currTime;
+        else if(tasks[taskIndex].state === 'play' && !Number.isInteger(tasks[taskIndex].startTime) && !Number.isInteger(tasks[taskIndex].stopTime)){
+            tasks[taskIndex].startTime = currTime;
         }
         //Case 3, task was just paused
-        else if(tasks[taskId].state === 'paused' && Number.isInteger(tasks[taskId].startTime) && !Number.isInteger(tasks[taskId].stopTime)){
-            tasks[taskId].stopTime = currTime;
+        else if(tasks[taskIndex].state === 'paused' && Number.isInteger(tasks[taskIndex].startTime) && !Number.isInteger(tasks[taskIndex].stopTime)){
+            tasks[taskIndex].stopTime = currTime;
             tasks = this.updateTimerDuration(false, taskId, tasks);
         }
 
@@ -413,7 +629,7 @@ class TimeTracker extends Component {
             var currTime = new Date().getTime();
 
             //The amount of time (in seconds) remaining until the timer should update visually
-            var updateTime = 60 - (newTasks[taskId].duration % 60);
+            var updateTime = 60 - (newTasks[self.getTaskIndex(taskId, newTasks)].duration % 60);
 
             setTimeout(function(){
                 self.updateTasks("interval", taskId, currTime+(updateTime*1000), newTasks);
@@ -438,7 +654,7 @@ class TimeTracker extends Component {
         var curr = new Date().getTime();
         var tasks = self.state.tasks;
 
-        if(tasks[taskId].state === "play"){
+        if(tasks[this.getTaskIndex(taskId, tasks)].state === "play"){
             self.updateTasks("submitted-playing", taskId, curr, tasks);
         }
         else{
@@ -450,13 +666,13 @@ class TimeTracker extends Component {
 
         var self = this;
 
-        //toggle pause/play if this was caused by clicking a button
+        //toggle pause/play if this was caused by clicking the timer button
         if(eventName === "clicked" || eventName === "submitted-playing"){
-            newTasks = this.setTaskStates(taskId, newTasks);
+            newTasks = this.setTaskState(taskId, newTasks);
         }
 
         if(eventName !== "submitted-paused"){
-            newTasks = this.setTaskTimes(taskId, currTime, newTasks);
+            newTasks = this.setTaskTime(taskId, currTime, newTasks);
         }
         
         newTasks = this.assignColors(newTasks);
@@ -464,29 +680,34 @@ class TimeTracker extends Component {
 
         self.setState({tasks: newTasks}, function(){
 
+            var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
+
             if(eventName === "clicked"){
                 self.startTimerInterval(taskId);
+                self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
             }
             else if(eventName === "submitted-playing" || eventName === "submitted-paused"){
-                self.postTaskUpdate(userId, taskId, self.state.tasks[taskId].title, self.state.tasks[taskId].state, self.state.tasks[taskId].duration);
+                self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
             }
         });
     }
 
     updateTimerDuration(stillPlaying, taskId, tasks){
 
-        if(tasks[taskId].startTime && tasks[taskId].stopTime){
+        var taskIndex = this.getTaskIndex(taskId, tasks);
+
+        if(tasks[taskIndex].startTime && tasks[taskIndex].stopTime){
             
-            var difference = Math.floor((tasks[taskId].stopTime - tasks[taskId].startTime)/1000);
-            tasks[taskId].duration = parseInt(tasks[taskId].duration) + difference;
+            var difference = Math.floor((tasks[taskIndex].stopTime - tasks[taskIndex].startTime)/1000);
+            tasks[taskIndex].duration = parseInt(tasks[taskIndex].duration) + difference;
 
             if(stillPlaying){
-                tasks[taskId].startTime = tasks[taskId].stopTime;
-                tasks[taskId].stopTime = null;
+                tasks[taskIndex].startTime = tasks[taskIndex].stopTime;
+                tasks[taskIndex].stopTime = null;
             }
             else{
-                tasks[taskId].startTime = null;
-                tasks[taskId].stopTime = null;
+                tasks[taskIndex].startTime = null;
+                tasks[taskIndex].stopTime = null;
             }
             
         }

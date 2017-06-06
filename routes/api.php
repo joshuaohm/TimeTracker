@@ -20,3 +20,4 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::get('/tasks/{userId}', 'TimerApiController@getTasksForUser');
 
 Route::post('/task', 'TimerApiController@updateTask');
+Route::post('/task/delete', 'TimerApiController@deleteTask');

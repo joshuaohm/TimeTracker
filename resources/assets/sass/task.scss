@@ -111,11 +111,59 @@
     .hour{
       left:25%;
       transform: translateX(-25%);
+
+      input{
+        position: relative;
+        width: 100%;
+        height: 100%;
+
+        border: none;
+        outline: none;
+        background: inherit;
+        text-align: center;
+        text-shadow: 1px 2px 2px #000000;
+      }
+
+      input[type="text"]:disabled{
+        border: none;
+        outline: none;
+        background: inherit;
+      }
+
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+      }
     }
 
     .minute{
       left:-25%;
       transform: translateX(25%);
+
+      input{
+        position: relative;
+        width: 100%;
+        height: 100%;
+
+        border: none;
+        outline: none;
+        background: inherit;
+        text-align: center;
+        text-shadow: 1px 2px 2px #000000;
+      }
+
+      input[type="text"]:disabled{
+        border: none;
+        outline: none;
+        background: inherit;
+      }
+
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+      }
     }
 
     .colon span{

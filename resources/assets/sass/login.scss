@@ -1,0 +1,25 @@
+.login-prompt {
+  background-color: #666666;
+  width: 100%;
+  min-height: 220px;
+  font-size: 0px;
+  font-size:16px;
+  font-family: 'Open Sans';
+  text-align: center;
+
+  a{
+    display: block;
+    min-height: 220px;
+    width: 100%;
+    text-decoration: none;
+    line-height: 220px;
+  }
+
+  a:hover{
+    color: #3097D1;
+    text-decoration: none;
+  }
+
+}
+
+

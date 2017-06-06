@@ -27,7 +27,7 @@ Route::get('/app', function (){
     return view('app', ['userId' => $id]);
   }
   else{
-    return view('app', ['userId' => null]);
+    return view('app', ['userId' => -1]);
   }
   
   

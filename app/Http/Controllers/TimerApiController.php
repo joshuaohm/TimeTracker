@@ -41,7 +41,7 @@ class TimerApiController extends Controller
             ->where('id', $taskId)
             ->first();
 
-            if($task->id > 0 && $task->ownerId > 0 && $task->duration >= 0){
+            if($task !== null && $task->id > 0 && $task->ownerId > 0 && $task->duration >= 0){
 
                 $task->title = $title;
                 $task->state = $state;
@@ -64,11 +64,31 @@ class TimerApiController extends Controller
                 return json_encode(array('result'=>'success'));
             }
             else{
-                return json_encode(array('result'=>'error1', 'userId'=>is_int($userId), 'taskId'=> is_int($taskId), 'duration' => is_int($duration)));
+                return json_encode(array('result'=>'error1'));
             }
         }
         else{
             return json_encode(array('result'=>'error2'));
         }
+    }
+
+    public function deleteTask(){
+
+        $taskId = (int)Input::get('taskId');
+        $userId = (int)Input::get('userId');
+
+        $task = Tasks::where('ownerId', $userId)
+            ->where('id', $taskId)
+            ->first();
+
+        if($task !==null && $task->id > 0){
+            $task->delete();
+            return json_encode(array('result'=>'success'));
+        }
+        else{
+            return json_encode(array('result'=>'error1'));
+        }
+
+
     }
 }
