@@ -19,16 +19,28 @@
       "src": "fontawesome"
     },
     {
+      "uid": "2626e3a1bbcd90e45849af3b58a1d594",
+      "css": "trash",
+      "code": 59394,
+      "src": "entypo"
+    },
+    {
       "uid": "de2fc7a5c986ab8c622f63455d7cf814",
       "css": "upload-cloud",
       "code": 61678,
       "src": "fontawesome"
     },
     {
-      "uid": "2626e3a1bbcd90e45849af3b58a1d594",
-      "css": "trash",
-      "code": 59394,
-      "src": "entypo"
+      "uid": "598a5f2bcf3521d1615de8e1881ccd17",
+      "css": "clock",
+      "code": 59395,
+      "src": "fontawesome"
+    },
+    {
+      "uid": "ce5e29aa5208417700e7f7012a236c00",
+      "css": "undo",
+      "code": 59396,
+      "src": "iconic"
     }
   ]
 }

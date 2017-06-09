@@ -1,9 +1,17 @@
 .tasks-list{
-  background-color: #666666;
+  position: relative;
+  background-color: #999;
   width: 100%;
   min-height: 220px;
   font-size:0px;
   font-family: 'Open Sans';
+}
+
+.tasks-view{
+  position: relative;
+  min-height: 220px;
+  width: 100%;
+  border: 2px solid black;
 }
 
 .color-1{
@@ -79,6 +87,7 @@
       text-align: center;
       text-shadow: 1px 2px 2px #000000;
       padding-left: 10px;
+      cursor: pointer;
 
     }
 
@@ -111,17 +120,18 @@
     .hour{
       left:25%;
       transform: translateX(-25%);
+      cursor: pointer;
 
       input{
         position: relative;
         width: 100%;
         height: 100%;
-
         border: none;
         outline: none;
         background: inherit;
         text-align: center;
         text-shadow: 1px 2px 2px #000000;
+        cursor: pointer;
       }
 
       input[type="text"]:disabled{
@@ -140,17 +150,18 @@
     .minute{
       left:-25%;
       transform: translateX(25%);
+      cursor: pointer;
 
       input{
         position: relative;
         width: 100%;
         height: 100%;
-
         border: none;
         outline: none;
         background: inherit;
         text-align: center;
         text-shadow: 1px 2px 2px #000000;
+        cursor: pointer;
       }
 
       input[type="text"]:disabled{
@@ -199,12 +210,68 @@
   
 }
 
-.add-task{
-  font-size: 48px;
-  color: white;
-  text-align: right;
-  vertical-align: middle;
-  padding-right: 20px;
+.buttons-row{
+  height: 76px;
+  display: table;
+  width: 100%;
+
+  .left-wrapper{
+
+    width: 50%;
+    display: table-cell;
+
+    .add-task{
+      font-size: 48px;
+      color: white;
+      text-align: middle;
+      vertical-align: middle;
+      padding-left: 20px;
+      width: 76px;
+      cursor: pointer;
+    }
+  }
+  
+  .right-wrapper{
+    width: 50%;
+    display: table-cell;
+
+    .view-hours{
+      width: 40px;
+      height: 60px;
+      position: relative;
+      top: 10px;
+      background-color: #FFF;
+      cursor: pointer;
+      float: right;
+      border-left: 1px solid #d3e0e9;
+      border-top: 1px solid #d3e0e9;
+      border-bottom: 1px solid #d3e0e9;
+      border-top-left-radius: 4px;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+
+      .text{
+        top: 8px;
+        position: relative;
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+        color: black;
+        text-align: center;
+        margin-right: 0px;
+      }
+
+      .icon-clock:before{
+        position: relative;
+        top: 0px;
+        left: 0px;
+        margin-top: 0px;
+        padding-top: 0px;
+        line-height: 28px;
+      }
+    }
+  }
+  
 }
 
 @media screen and (max-width: 1200px) and (min-width: 992px){

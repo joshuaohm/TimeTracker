@@ -13,4 +13,5 @@ require('./bootstrap');
  * or customize the JavaScript scaffolding to fit your unique needs.
  */
 
-import TaskManager from './components/TimeTracker';
+import TaskView from './components/TaskView';
+import HoursView from './components/HoursView';

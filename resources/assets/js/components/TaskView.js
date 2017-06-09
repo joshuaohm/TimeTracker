@@ -4,31 +4,19 @@ import $ from 'jquery';
 import ReactCSSTransitionGroup from 'react-addons-css-transition-group';
 import Modal from './Modal';
 import Confirm from './Confirm';
+import HoursView from './HoursView';
 
-class TimeTracker extends Component {
+class TaskView extends Component {
 
     constructor(props) {
         super(props);
 
         this.state = {
             tasks: [],
+            hours: [],
             userId: '',
+            view: 'tasks',
         };
-
-
-        //BIND EVENTS
-
-        this.handleAddTaskButton = this.handleAddTaskButton.bind(this);
-        this.handleDeleteButton = this.handleDeleteButton.bind(this);
-        this.handleHourChange = this.handleHourChange.bind(this);
-        this.handleMinuteChange = this.handleMinuteChange.bind(this);
-        this.handleSubmitButton = this.handleSubmitButton.bind(this);
-        this.handleTimerButton = this.handleTimerButton.bind(this);
-        this.handleTitleChange = this.handleTitleChange.bind(this);
-
-        this.onHourBlur = this.onHourBlur.bind(this);
-        this.onMinuteBlur = this.onMinuteBlur.bind(this);
-        this.onTitleBlur = this.onTitleBlur.bind(this);
     }
 
     componentDidMount(){
@@ -45,6 +33,19 @@ class TimeTracker extends Component {
 
                     tasks = this.assignColors(tasks);
                     tasks = this.parseTimes(tasks);
+
+
+                    /* Come Back to this next
+                    fetch('/api/hours'+userId)
+                        .then(response => {
+                            return response.json();
+                        })
+                        .then(
+
+
+                        );
+
+                    */
                 
                     
                     this.setState({tasks:tasks, userId:userId});
@@ -106,11 +107,9 @@ class TimeTracker extends Component {
         for(var i = 0; i < tasks.length; i++){
             if(tasks[i].id === parseInt(taskId)){
                 index = i;
-                console.log("Searching for "+taskId+" found "+tasks[i].id);
             }
         }
 
-        console.log('index: '+index);
         return index;
     }
 
@@ -149,6 +148,7 @@ class TimeTracker extends Component {
             'id': taskId,
             'title': title,
             'state': 'paused',
+            'status': 'active',
             'duration': 0
         }
         var tasks = self.state.tasks;
@@ -210,7 +210,6 @@ class TimeTracker extends Component {
 
         var taskId = $(e.target).attr("data-task");
         var newHour = e.target.value;
-        console.log("new hour is: "+newHour);
         var newTasks = this.state.tasks;
         var taskIndex = this.getTaskIndex(taskId, newTasks);
         var newTask = newTasks[taskIndex];
@@ -235,6 +234,11 @@ class TimeTracker extends Component {
 
         this.setState({tasks: newTasks});        
         
+    }
+
+    handleViewHoursButton(){
+
+        this.setState({view: "hours"});   
     }
 
     handleMinuteChange(e){
@@ -267,6 +271,11 @@ class TimeTracker extends Component {
 
         this.setState({tasks: newTasks});        
         
+    }
+
+    handleReturnButton(){
+
+      this.setState({view: "tasks"});   
     }
 
     handleTimerButton(e){
@@ -460,27 +469,59 @@ class TimeTracker extends Component {
                 "userId":self.state.userId,
                 "taskId": taskId
             },
-            success: self.submitSucceeded,
+            success: self.submitSucceeded.bind(this),
             dataType: "json"
         });
     }
 
-    postTaskUpdate(taskId, title, state, duration){
-
-        //Post a task's information for updating in the DB
+    postTaskHours(taskId){
+        
         var self = this;
 
         $.ajax({
             method: "POST",
-            url: "/api/task",
+            url: "/api/hours",
             data: {
+                "userId":self.state.userId,
+                "taskId": taskId,
+                "duration": self.state.tasks[taskId-1].duration,
+                "name": self.state.tasks[taskId-1].title
+            },
+            success: self.submitSucceeded.bind(this),
+            dataType: "json"
+        });
+    }
+
+    postTaskUpdate(taskId, title, state, duration, submitted=false){
+
+        //Post a task's information for updating in the DB
+        var self = this;
+
+        if(submitted){
+            var postData = {
+                "userId":self.state.userId,
+                "taskId": taskId,
+                "name": title,
+                "status": 'paused',
+                "duration": duration,
+                "submitted": submitted
+            };
+        }
+        else{
+            var postData = {
                 "userId":self.state.userId,
                 "taskId": taskId,
                 "name": title,
                 "status": 'paused',
                 "duration": duration
-            },
-            success: self.submitSucceeded,
+            };
+        }
+
+        $.ajax({
+            method: "POST",
+            url: "/api/task",
+            data: postData,
+            success: self.submitSucceeded.bind(this),
             dataType: "json"
         });
     }
@@ -500,12 +541,33 @@ class TimeTracker extends Component {
             );
         }
         else{
-            return (
-                <div className="tasks-list" id="main-window">
-                    <div className="add-task" onClick={this.handleAddTaskButton}>+</div>
-                    { this.renderTasks() }
-                </div>
-            );
+            if(this.state.view === "tasks"){
+                return (
+                    <div className="tasks-list" id="main-window">
+                        <div className="tasks-view">
+                            <div className="buttons-row">
+                                <div className="left-wrapper">
+                                    <div className="add-task" onClick={this.handleAddTaskButton.bind(this)}>+</div>
+                                </div>
+                                <div className="right-wrapper">
+                                    <div className="view-hours" onClick={this.handleViewHoursButton.bind(this)}>
+                                        <div className="text icon-clock"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            { this.renderTasks() }
+                        </div>
+                    </div>
+                );
+            }
+            else if(this.state.view === "hours"){
+                return (
+                    <div className="tasks-list" id="main-window">
+                        <HoursView handleReturnButton={this.handleReturnButton.bind(this)}/>
+                    </div>
+               );
+            }
+            
         }
         
     }
@@ -521,40 +583,43 @@ class TimeTracker extends Component {
         else{
 
             return this.state.tasks.map(task => {
-                return (
-                    <div className={ "task color-"+task.color } key={ task.id } data-task={ task.id }>
-                        <div className="title" data-task={ task.id }>
-                            <input type="text" data-task={ task.id } id={"title-"+task.id }  
-                                onChange={this.handleTitleChange} 
-                                onBlur={this.onTitleBlur}
-                                defaultValue={task.title} />
-                        </div>
-                        <div className="time">
-                            <div className="time-wrapper">
-                                <div className="hour" data-task={ task.id }>
-                                    <input type="text" data-task={task.id} id={"hour-"+task.id }  
-                                        onChange={this.handleHourChange}
-                                        onBlur={this.onHourBlur}
-                                        defaultValue={task.hour} />
-                                </div>
-                                <div className="colon"> 
-                                    <span className={"animation-colon "+task.state}>:</span>
-                                </div>
-                                <div className="minute" data-task={ task.id }>
-                                    <input type="text" data-task={task.id} id={"minute-"+task.id }  
-                                        onChange={this.handleMinuteChange}
-                                        onBlur={this.onMinuteBlur}
-                                        defaultValue={task.minute} />
+
+                if(task.status === "active"){
+                    return (
+                        <div className={ "task color-"+task.color } key={ task.id } data-task={ task.id }>
+                            <div className="title" data-task={ task.id }>
+                                <input type="text" data-task={ task.id } id={"title-"+task.id }  
+                                    onChange={this.handleTitleChange.bind(this)} 
+                                    onBlur={this.onTitleBlur.bind(this)}
+                                    defaultValue={task.title} />
+                            </div>
+                            <div className="time">
+                                <div className="time-wrapper">
+                                    <div className="hour" data-task={ task.id }>
+                                        <input type="text" data-task={task.id} id={"hour-"+task.id }  
+                                            onChange={this.handleHourChange.bind(this)}
+                                            onBlur={this.onHourBlur.bind(this)}
+                                            defaultValue={task.hour} />
+                                    </div>
+                                    <div className="colon"> 
+                                        <span className={"animation-colon "+task.state}>:</span>
+                                    </div>
+                                    <div className="minute" data-task={ task.id }>
+                                        <input type="text" data-task={task.id} id={"minute-"+task.id }  
+                                            onChange={this.handleMinuteChange.bind(this)}
+                                            onBlur={this.onMinuteBlur.bind(this)}
+                                            defaultValue={task.minute} />
+                                    </div>
                                 </div>
                             </div>
+                            <div className="buttonHolder">
+                                <div className="upload-btn icon-upload-cloud" data-task={task.id} onClick={this.handleSubmitButton.bind(this)}></div>
+                                <div className="timer-btn" data-state={ task.state } data-task={ task.id } onClick={this.handleTimerButton.bind(this)}>{this.renderTimerButton(task.state, task.id)}</div>
+                                <div className="delete-btn icon-trash" data-task={task.id} onClick={this.handleDeleteButton.bind(this)}></div>
+                            </div>
                         </div>
-                        <div className="buttonHolder">
-                            <div className="upload-btn icon-upload-cloud" data-task={task.id} onClick={this.handleSubmitButton}></div>
-                            <div className="timer-btn" data-state={ task.state } data-task={ task.id } onClick={this.handleTimerButton}>{this.renderTimerButton(task.state, task.id)}</div>
-                            <div className="delete-btn icon-trash" data-task={task.id} onClick={this.handleDeleteButton}></div>
-                        </div>
-                    </div>
-                );
+                    );
+                }
             });
         }
     }
@@ -593,8 +658,6 @@ class TimeTracker extends Component {
     }
 
     setTaskTime(taskId, currTime, tasks){
-
-        console.log("set task time id: "+taskId);
 
         var taskIndex = this.getTaskIndex(taskId, tasks);
 
@@ -645,6 +708,10 @@ class TimeTracker extends Component {
 
         console.log("from server");
         console.log(data);
+        
+        if(data.result === "success" && data.submitted === "true"){
+            this.postTaskHours(data.id);
+        }
 
     }
 
@@ -687,7 +754,7 @@ class TimeTracker extends Component {
                 self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
             }
             else if(eventName === "submitted-playing" || eventName === "submitted-paused"){
-                self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+                self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, true);
             }
         });
     }
@@ -716,10 +783,10 @@ class TimeTracker extends Component {
     }
 }
 
-export default TimeTracker;
+export default TaskView;
 
 // We only want to try to render our component on pages that have a div with an ID
 // of "example"; otherwise, we will see an error in our console 
 if (document.getElementById('task-window')) {
-    ReactDOM.render(<TimeTracker />, document.getElementById('task-window'));
+    ReactDOM.render(<TaskView />, document.getElementById('task-window'));
 }
