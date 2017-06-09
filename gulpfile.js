@@ -16,5 +16,6 @@ require('laravel-elixir-webpack-react');
 elixir((mix) => {
     mix.sass('app.scss')
        .webpack('app.js')
-       .copy('resources/assets/font', 'public/font');
+       .copy('resources/assets/font', 'public/font')
+       .copy('resources/assets/config.json', 'public/config.json');
 });
