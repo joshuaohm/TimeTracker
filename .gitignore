@@ -1,6 +1,6 @@
 vendor/
 node_modules/
-public/
+public/*
 
 # Laravel 4 specific
 bootstrap/compiled.php
