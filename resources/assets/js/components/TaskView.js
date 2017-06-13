@@ -17,6 +17,7 @@ class TaskView extends Component {
             userId: '',
             view: 'tasks',
         };
+
     }
 
     componentDidMount(){
@@ -35,20 +36,20 @@ class TaskView extends Component {
                     tasks = this.parseTimes(tasks);
 
 
-                    /* Come Back to this next
-                    fetch('/api/hours'+userId)
+                    fetch('/api/hours/'+userId)
                         .then(response => {
                             return response.json();
                         })
-                        .then(
+                        .then(hours => {
 
+                            hours = this.parseTimes(hours);
+                            hours = this.assignColors(hours);
+                            this.setState({tasks:tasks, userId:userId, hours:hours});
+                        });
 
-                        );
-
-                    */
                 
                     
-                    this.setState({tasks:tasks, userId:userId});
+                    
             });
         }
     }
@@ -71,6 +72,15 @@ class TaskView extends Component {
             }
         }
 
+        return tasks;
+    }
+
+    clearDuration(taskId){
+
+        var tasks = this.state.tasks;
+        tasks[taskId-1].duration = 0;
+        tasks = this.parseTimes(tasks);
+        console.log('gets here');
         return tasks;
     }
 
@@ -124,6 +134,31 @@ class TaskView extends Component {
         }
 
         return false;
+    }
+
+    getHours(){
+
+        console.log(this.state.hours);
+
+        return this.state.hours;
+    }
+
+    getHourInfo(){
+
+        var self = this;
+        var hours = null;
+
+        fetch('/api/hours/'+self.state.userId)
+            .then(response => {
+                return response.json();
+            })
+            .then(function(resp){
+
+                hours = self.parseTimes(resp);
+                hours = self.assignColors(hours);
+            });
+
+            return hours;
     }
 
     handleAddTaskButton(e){
@@ -487,7 +522,12 @@ class TaskView extends Component {
                 "duration": self.state.tasks[taskId-1].duration,
                 "name": self.state.tasks[taskId-1].title
             },
-            success: self.submitSucceeded.bind(this),
+            success: function(){
+                var tasks = self.clearDuration(taskId);
+                var hours = self.getHourInfo();
+
+                self.setState({tasks:tasks, hours:hours});
+            },
             dataType: "json"
         });
     }
@@ -563,7 +603,7 @@ class TaskView extends Component {
             else if(this.state.view === "hours"){
                 return (
                     <div className="tasks-list" id="main-window">
-                        <HoursView handleReturnButton={this.handleReturnButton.bind(this)}/>
+                        <HoursView handleReturnButton={this.handleReturnButton.bind(this)} getHours={this.getHours.bind(this)}/>
                     </div>
                );
             }

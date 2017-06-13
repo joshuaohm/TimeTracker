@@ -13,7 +13,7 @@ class HoursView extends Component {
 
     componentDidMount(){
 
-      
+
     }
 
     render(){
@@ -29,9 +29,26 @@ class HoursView extends Component {
                   </div>
               </div>
           </div>
-
+          {this.renderHours()}
         </div>
       );
+    }
+
+    renderHours(){
+
+      var hours = this.props.getHours();
+      console.log(hours);
+
+      return hours.map(task => {
+
+        return(
+          <div className={"task-hours color-"+task.color} key={ task.taskId } data-task={ task.taskId }>
+            <div className="title">{ task.title }</div>
+            <div className="hours">{ task.hour+" hours "+task.minute+" minutes" }</div>
+          </div>
+        );
+
+      });
     }
 }
 

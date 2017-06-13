@@ -3,6 +3,9 @@
   min-height: 220px;
   width: 100%;
   border: 2px solid #4ca531;
+  font-family: 'Open Sans';
+  text-shadow: 1px 2px 2px #000000;
+  color: white;
 
   .buttons-row{
     height: 76px;
@@ -39,9 +42,10 @@
           font-size: 28px;
           width: 28px;
           height: 28px;
-          color: black;
           text-align: center;
           margin-right: 0px;
+          color: black;
+          text-shadow: none;
         }
 
         .icon-clock:before{
@@ -54,5 +58,61 @@
         }
       }
     }
+  }
+
+  .task-hours{
+    width: 100%;
+    height: 80px;
+    background-color: white;
+    font-size: 0px;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    margin-bottom: 10px;
+
+
+    .title{
+      font-size: 14px;
+      display: inline-block;
+      width: 50%;
+      text-align: left;
+      padding-left: 20px;
+      line-height: 80px;
+    }
+
+    .hours{
+      font-size: 14px;
+      display: inline-block;
+      width: 50%;
+      text-align: center;
+      line-height: 80px;
+    }
+  }
+
+  .color-1{
+    background-color: $task-1;
+  }
+
+  .color-2{
+    background-color: $task-2;
+  }
+
+  .color-3{
+    background-color: $task-3;
+  }
+
+  .color-4{
+    background-color: $task-4;
+  }
+
+  .color-5{
+    background-color: $task-5;
+  }
+
+  .color-6{
+    background-color: $task-6;
+  }
+
+  .color-7{
+    background-color: $task-7;
   }
 }

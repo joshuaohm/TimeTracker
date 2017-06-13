@@ -8,6 +8,7 @@ use App\User;
 use App\Tasks;
 use App\TaskHours;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 
 class TimerApiController extends Controller
 {
@@ -45,9 +46,30 @@ class TimerApiController extends Controller
 
     public function getTaskHoursForUser($userId){
 
-        return TaskHours::where('ownerId', $userId)
-          ->orderBy('id', 'asc')
-          ->get();
+        $ids = DB::table('task_hours')
+            ->select('taskId')
+            ->where('ownerId', $userId)
+            ->distinct()
+            ->get();
+
+        $tasks = array();
+
+            foreach($ids as $task){
+
+                $hours = DB::table('task_hours')
+                    ->where('taskId', $task->taskId)
+                    ->sum('duration');
+
+                $title = Tasks::select('title')
+                    ->where('ownerId', $userId)
+                    ->where('id', $task->taskId)
+                    ->get();
+                    
+                array_push($tasks, array('taskId' => $task->taskId, 'title' => $title[0]->title, 'duration' => $hours));
+
+            }
+
+        return $tasks;
     }
 
     public function getTasksForUser($userId){
