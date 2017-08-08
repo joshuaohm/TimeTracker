@@ -16,6 +16,15 @@ class HoursView extends Component {
 
     }
 
+    handleDeleteButton(e){
+
+      var taskId = $(e.target).attr("data-task");
+
+      this.props.deleteHours(taskId)
+      
+      console.log("hours handleDelete "+taskId);
+    }
+
     render(){
 
       return (
@@ -37,14 +46,20 @@ class HoursView extends Component {
     renderHours(){
 
       var hours = this.props.getHours();
-      console.log(hours);
 
       return hours.map(task => {
 
         return(
           <div className={"task-hours color-"+task.color} key={ task.taskId } data-task={ task.taskId }>
             <div className="title">{ task.title }</div>
-            <div className="hours">{ task.hour+" hours "+task.minute+" minutes" }</div>
+            <div className="timeHolder">
+              <div className="hours">{ task.hour+" hours"}</div>
+              <div className="minutes">{" "+task.minute+" minutes" }</div>
+            </div>
+            
+            <div className="buttonHolder" data-task={task.taskId}>
+              <div className="delete-btn icon-trash" data-task={task.taskId} onClick={this.handleDeleteButton.bind(this)}></div>
+            </div>
           </div>
         );
 

@@ -72,19 +72,48 @@
 
     .title{
       font-size: 14px;
+      vertical-align: top;
       display: inline-block;
       width: 50%;
       text-align: left;
       padding-left: 20px;
       line-height: 80px;
+      position: relative;
     }
 
-    .hours{
+    .timeHolder{
       font-size: 14px;
+      vertical-align: top;
       display: inline-block;
-      width: 50%;
+      width: 40%;
+      height: 100%;
+      line-height: 80px;
+      position: relative;
+
+      .hours, .minutes{
+        display: inline-block;
+        width: 50%;
+        height: 100%;
+      }
+
+      .hours{
+        text-align: right;
+      }
+
+      .minutes{
+        padding-left:3px;
+        text-align: left;
+      }
+    }
+
+    .buttonHolder{
+      font-size: 14px;
+      vertical-align: top;
+      display: inline-block;
+      width: 8%;
       text-align: center;
       line-height: 80px;
+      position: relative;
     }
   }
 
@@ -114,5 +143,42 @@
 
   .color-7{
     background-color: $task-7;
+  }
+}
+
+@media screen and (max-width: 480px){
+
+  .hours-view{
+
+    .task-hours{
+
+      .title{
+        top:0;
+        padding-left: 10px;
+        width: 40%;
+      }
+
+      .timeHolder{
+        top:0;
+        font-size: 12px;
+
+        .hours, .minutes{
+          display: block;
+          width:100%;
+          height: 50%;
+          text-align: center;
+          line-height: 40px;
+        }
+        
+        .hours{
+          line-height:60px;
+        }
+
+        .minutes{
+          line-height: 20px;
+          padding-left: 0px;
+        }
+      }
+    }
   }
 }

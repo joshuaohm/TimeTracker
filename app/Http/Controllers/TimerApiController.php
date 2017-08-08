@@ -22,12 +22,8 @@ class TimerApiController extends Controller
         //$this->middleware('auth:api');
     }
 
-    public function addTaskHours(){
+    public function addTaskHours($taskId, $userId, $duration, $title){
 
-        $taskId = (int)Input::get('taskId');
-        $userId = (int)Input::get('userId');
-        $duration = (int)Input::get('duration');
-        $title = Input::get('name');
 
         if(is_int($userId) && is_int($taskId) && is_int($duration) && $title !== "" && $title !== null){
 
@@ -37,11 +33,37 @@ class TimerApiController extends Controller
             $hours->duration = $duration;
             $hours->save();
 
-            return json_encode(array('result'=>'success'));
+            return json_encode(array('result'=>'success', 'taskId'=>$taskId));
         }
         else{
             return json_encode(array('result'=>'error3'));
         }
+    }
+
+    public function deleteHours(){
+
+        $taskId = (int)Input::get('taskId');
+        $userId = (int)Input::get('userId');
+
+         $hours = DB::table('task_hours')
+            ->where('ownerId', $userId)
+            ->where('taskId', $taskId)
+            ->update(['status' => 'deleted']);
+        
+        return json_encode(array('result'=>'success'));
+    }
+
+    public function deleteTask(){
+
+        $taskId = (int)Input::get('taskId');
+        $userId = (int)Input::get('userId');
+
+         $tasks = DB::table('tasks')
+            ->where('ownerId', $userId)
+            ->where('id', $taskId)
+            ->update(['status' => 'deleted']);
+
+        return json_encode(array('result'=>'success'));
     }
 
     public function getTaskHoursForUser($userId){
@@ -49,6 +71,7 @@ class TimerApiController extends Controller
         $ids = DB::table('task_hours')
             ->select('taskId')
             ->where('ownerId', $userId)
+            ->where('status', 'active')
             ->distinct()
             ->get();
 
@@ -58,14 +81,15 @@ class TimerApiController extends Controller
 
                 $hours = DB::table('task_hours')
                     ->where('taskId', $task->taskId)
+                    ->where('status', 'active')
                     ->sum('duration');
 
                 $title = Tasks::select('title')
                     ->where('ownerId', $userId)
                     ->where('id', $task->taskId)
-                    ->get();
-                    
-                array_push($tasks, array('taskId' => $task->taskId, 'title' => $title[0]->title, 'duration' => $hours));
+                    ->first();
+
+                array_push($tasks, array('taskId' => $task->taskId, 'title' => $title["title"], 'duration' => $hours));
 
             }
 
@@ -75,21 +99,25 @@ class TimerApiController extends Controller
     public function getTasksForUser($userId){
 
         return Tasks::where('ownerId', $userId)
+          ->where('status', 'active')
           ->orderBy('id', 'asc')
           ->get();
     }
 
-    public function updateTask(){
+    public function updateTask($addHours = false){
+
+
+        //Retreive posted information
 
         $taskId = (int)Input::get('taskId');
         $userId = (int)Input::get('userId');
         $duration = (int)Input::get('duration');
         $title = Input::get('name');
         $state = Input::get('status');
-        $submitted = false;
+        $updateHours = false;
 
-        if(Input::get('submitted') !== null){
-            $submitted = Input::get('submitted');
+        if(Input::get('hours') !== null){
+            $updateHours = Input::get('hours');
         }
 
         //VEEEERY basic input checking
@@ -99,23 +127,32 @@ class TimerApiController extends Controller
             ->where('id', $taskId)
             ->first();
 
-            //This task exists all ready, update the information
+            //If this task exists all ready, update the information
             if($task !== null && $task->id > 0 && $task->ownerId > 0 && $task->duration >= 0){
 
                 $task->title = $title;
                 $task->state = $state;
                 $task->duration = $duration;
+                $task->state = $state;
+
+                if($addHours){
+                    $task->duration = 0;
+                }
 
                 $task->save();
 
-                if($submitted){
-                    return json_encode(array('result'=>'success', 'submitted'=>'true', 'id' => $taskId));
+                if($addHours){
+                    $result = self::addTaskHours($taskId, $userId, $duration, $title);
+                    return $result;
+                }
+                else if($updateHours){
+                    return json_encode(array('result'=>'success', 'update' => 'hours'));
                 }
                 else{
                     return json_encode(array('result'=>'success'));
                 }
             }
-            //This task is new, save a new task
+            //If this task is new, save a new task
             else if($task === null){
                 
                 $newTask = new Tasks;
@@ -124,10 +161,15 @@ class TimerApiController extends Controller
                 $newTask->title = $title;
                 $newTask->state = $state;
 
+                if($addHours){
+                    $task->duration = 0;
+                }
+
                 $newTask->save();
 
-                if($submitted){
-                    return json_encode(array('result'=>'success', 'submitted'=>'true', 'id' => $taskId));
+                if($addHours == true){
+                   $result = self::addTaskHours($taskId, $userId, $duration, $title);
+                   return $result;
                 }
                 else{
                     return json_encode(array('result'=>'success'));
@@ -143,24 +185,11 @@ class TimerApiController extends Controller
         }
     }
 
-    public function deleteTask(){
+    public function updateTaskAndAddHours(){
 
-        $taskId = (int)Input::get('taskId');
-        $userId = (int)Input::get('userId');
+        $result = self::updateTask(true);
 
-        $task = Tasks::where('ownerId', $userId)
-            ->where('id', $taskId)
-            ->first();
-
-        if($task !==null && $task->id > 0){
-            $task->status = "deleted";
-            $task->save();
-            return json_encode(array('result'=>'success'));
-        }
-        else{
-            return json_encode(array('result'=>'error1'));
-        }
-
-
+        return $result;
+        
     }
 }

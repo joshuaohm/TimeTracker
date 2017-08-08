@@ -19,6 +19,7 @@ class CreateTaskHoursTable extends Migration
             $table->integer('taskId')->default(0);
             $table->integer('duration')->default(0);
             $table->integer('ownerId')->default(0);
+            $table->string('status')->default('active');
         });
     }
 

@@ -21,5 +21,6 @@ Route::get('/tasks/{userId}', 'TimerApiController@getTasksForUser');
 Route::get('/hours/{userId}', 'TimerApiController@getTaskHoursForUser');
 
 Route::post('/task', 'TimerApiController@updateTask');
-Route::post('/hours', 'TimerApiController@addTaskHours');
+Route::post('/task-hours', 'TimerApiController@updateTaskAndAddHours');
 Route::post('/task/delete', 'TimerApiController@deleteTask');
+Route::post('/hours/delete', 'TimerApiController@deleteHours');

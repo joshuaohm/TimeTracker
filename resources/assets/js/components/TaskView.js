@@ -16,6 +16,7 @@ class TaskView extends Component {
             hours: [],
             userId: '',
             view: 'tasks',
+            initialized: false
         };
 
     }
@@ -25,7 +26,7 @@ class TaskView extends Component {
         //when the application initializes
         //Grab the user's tasks from the database, use this to set the state
 
-        if(userId !== null){
+        if(userId !== null && this.state.initialized === false){
             fetch('/api/tasks/'+userId)
                 .then(response => {
                     return response.json();
@@ -44,12 +45,8 @@ class TaskView extends Component {
 
                             hours = this.parseTimes(hours);
                             hours = this.assignColors(hours);
-                            this.setState({tasks:tasks, userId:userId, hours:hours});
-                        });
-
-                
-                    
-                    
+                            this.setState({tasks:tasks, userId:userId, hours:hours, initialized:true});
+                        });    
             });
         }
     }
@@ -78,9 +75,8 @@ class TaskView extends Component {
     clearDuration(taskId){
 
         var tasks = this.state.tasks;
-        tasks[taskId-1].duration = 0;
+        tasks[this.getTaskIndex(taskId, tasks)].duration = 0;
         tasks = this.parseTimes(tasks);
-        console.log('gets here');
         return tasks;
     }
 
@@ -95,6 +91,17 @@ class TaskView extends Component {
         }
 
         return false;
+    }
+
+    deleteHours(taskId){
+        this.postDeleteHours(taskId);
+    }
+
+    deleteHoursSucceeded(data){
+
+        console.log("deleteHoursSucceeded ");
+        console.log(data);
+        this.getHourInfo();
     }
 
     deleteTask(taskId){
@@ -138,27 +145,48 @@ class TaskView extends Component {
 
     getHours(){
 
-        console.log(this.state.hours);
-
         return this.state.hours;
     }
 
     getHourInfo(){
 
-        var self = this;
-        var hours = null;
+        $.ajax({
+            method: "GET",
+            url: "/api/hours/"+this.state.userId, 
+            success: function(data){
+                console.log("here");
+                var newHours = this.parseTimes(data);
+                newHours = this.assignColors(newHours);
+                this.setState({hours: newHours});
+            }.bind(this)
+        });
+    }
 
-        fetch('/api/hours/'+self.state.userId)
-            .then(response => {
-                return response.json();
-            })
-            .then(function(resp){
+    getHourInfoAndUpdate(taskId, self){
 
-                hours = self.parseTimes(resp);
-                hours = self.assignColors(hours);
-            });
+         $.ajax({
+            method: "GET",
+            url: "/api/hours/"+self.state.userId, 
+            success: function(data){
+                self.getHourSucceeded(self, data, taskId);
+            }.bind(self)
+        });
+    }
 
-            return hours;
+    getHourSucceeded(self, hours, taskId){
+
+        var newHours = self.parseTimes(hours);
+        newHours = self.assignColors(newHours);
+
+        var newTasks = self.clearDuration(taskId);
+        
+        /*** For some god awful reason, setState AND the forceUpdate were failing to make the taskView rerender (times on the submitted task were not being zeroed out even though state had changed). 
+        ***  My stupid work around was to change the view to the hours page, which works for some reason.
+        */
+        self.setState({tasks: newTasks, hours: newHours, view:'hours'}, function(){
+            self.forceUpdate();
+        });
+
     }
 
     handleAddTaskButton(e){
@@ -186,13 +214,13 @@ class TaskView extends Component {
             'status': 'active',
             'duration': 0
         }
+
         var tasks = self.state.tasks;
-
-
 
         tasks.push(newTask);
         tasks = self.assignColors(tasks);
         tasks = self.parseTimes(tasks);
+
         self.setState({tasks}, function(){
             var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
             self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
@@ -441,7 +469,7 @@ class TaskView extends Component {
         var taskId = $(e.target).attr("data-task");
         var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
 
-        self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+        self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, true);
     }
 
     parseTimeReverse(task){
@@ -493,6 +521,23 @@ class TaskView extends Component {
         return taskList;
     }
 
+    postDeleteHours(taskId){
+
+         var self = this;
+
+        $.ajax({
+            method: "POST",
+            url: "/api/hours/delete",
+            data: {
+                "userId":self.state.userId,
+                "taskId": taskId
+            },
+            success: self.deleteHoursSucceeded.bind(self, {taskId:taskId}),
+            dataType: "json"
+        });
+
+    }
+
     postDeleteTask(taskId){
 
         var self = this;
@@ -504,47 +549,43 @@ class TaskView extends Component {
                 "userId":self.state.userId,
                 "taskId": taskId
             },
-            success: self.submitSucceeded.bind(this),
+            success: self.submitSucceeded.bind(self),
             dataType: "json"
         });
     }
 
-    postTaskHours(taskId){
+    postTaskHours(taskId, title, state, duration, submitted=false){
         
         var self = this;
 
         $.ajax({
             method: "POST",
-            url: "/api/hours",
+            url: "/api/task-hours", 
             data: {
                 "userId":self.state.userId,
                 "taskId": taskId,
-                "duration": self.state.tasks[taskId-1].duration,
-                "name": self.state.tasks[taskId-1].title
+                "duration": duration,
+                "name": title,
+                "status": 'paused'
             },
-            success: function(){
-                var tasks = self.clearDuration(taskId);
-                var hours = self.getHourInfo();
-
-                self.setState({tasks:tasks, hours:hours});
-            },
+            success: self.submitSucceeded.bind(self),
             dataType: "json"
         });
     }
 
-    postTaskUpdate(taskId, title, state, duration, submitted=false){
+    postTaskUpdate(taskId, title, state, duration, updateHours=false){
 
         //Post a task's information for updating in the DB
         var self = this;
 
-        if(submitted){
+        if(updateHours){
             var postData = {
                 "userId":self.state.userId,
                 "taskId": taskId,
                 "name": title,
                 "status": 'paused',
                 "duration": duration,
-                "submitted": submitted
+                "hours": updateHours
             };
         }
         else{
@@ -561,7 +602,7 @@ class TaskView extends Component {
             method: "POST",
             url: "/api/task",
             data: postData,
-            success: self.submitSucceeded.bind(this),
+            success: self.submitSucceeded.bind(self),
             dataType: "json"
         });
     }
@@ -603,7 +644,7 @@ class TaskView extends Component {
             else if(this.state.view === "hours"){
                 return (
                     <div className="tasks-list" id="main-window">
-                        <HoursView handleReturnButton={this.handleReturnButton.bind(this)} getHours={this.getHours.bind(this)}/>
+                        <HoursView deleteHours={this.deleteHours.bind(this)} handleReturnButton={this.handleReturnButton.bind(this)} getHours={this.getHours.bind(this)}/>
                     </div>
                );
             }
@@ -626,6 +667,7 @@ class TaskView extends Component {
 
                 if(task.status === "active"){
                     return (
+
                         <div className={ "task color-"+task.color } key={ task.id } data-task={ task.id }>
                             <div className="title" data-task={ task.id }>
                                 <input type="text" data-task={ task.id } id={"title-"+task.id }  
@@ -743,14 +785,18 @@ class TaskView extends Component {
 
     submitSucceeded(data){
 
-        //TO-DO: Implement error messaging here
-        //data should be JSON object { result: "success"};
+        var self = this;
 
-        console.log("from server");
-        console.log(data);
-        
-        if(data.result === "success" && data.submitted === "true"){
-            this.postTaskHours(data.id);
+        //console.log("from server");
+        //console.log(data);
+
+        if(data.result === 'success' && data.hasOwnProperty('taskId') && Number.isInteger(data.taskId) && data.taskId > 0){
+
+            this.getHourInfoAndUpdate(data.taskId, self);
+        }
+        else if(data.result === 'success' && data.hasOwnProperty('update') && data.update === "hours"){
+
+            this.getHourInfo();
         }
 
     }
@@ -761,12 +807,19 @@ class TaskView extends Component {
         var curr = new Date().getTime();
         var tasks = self.state.tasks;
 
-        if(tasks[this.getTaskIndex(taskId, tasks)].state === "play"){
-            self.updateTasks("submitted-playing", taskId, curr, tasks);
+        if(tasks[self.getTaskIndex(taskId, tasks)].state === "play"){
+            //self.updateTasks("submitted-playing", taskId, curr, tasks);
+            var newTasks = self.setTaskState(taskId, tasks);
         }
         else{
-            self.updateTasks("submitted-paused", taskId, curr, tasks);
+            //self.updateTasks("submitted-paused", taskId, curr, tasks);
+            var newTasks = self.setTaskTime(taskId, curr, tasks);
         }
+
+        newTasks = self.assignColors(newTasks);
+        newTasks = self.parseTimes(newTasks);
+
+        self.postTaskHours(taskId, newTasks[self.getTaskIndex(taskId, newTasks)].title, newTasks[self.getTaskIndex(taskId, newTasks)].state, newTasks[self.getTaskIndex(taskId, newTasks)].duration, true);
     }
 
     updateTasks(eventName, taskId, currTime, newTasks){
@@ -774,12 +827,8 @@ class TaskView extends Component {
         var self = this;
 
         //toggle pause/play if this was caused by clicking the timer button
-        if(eventName === "clicked" || eventName === "submitted-playing"){
+        if(eventName === "clicked"){
             newTasks = this.setTaskState(taskId, newTasks);
-        }
-
-        if(eventName !== "submitted-paused"){
-            newTasks = this.setTaskTime(taskId, currTime, newTasks);
         }
         
         newTasks = this.assignColors(newTasks);
@@ -792,9 +841,6 @@ class TaskView extends Component {
             if(eventName === "clicked"){
                 self.startTimerInterval(taskId);
                 self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
-            }
-            else if(eventName === "submitted-playing" || eventName === "submitted-paused"){
-                self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, true);
             }
         });
     }
