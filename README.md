@@ -7,8 +7,10 @@ Front end files can be found in /resources/assets
 If you have php, npm, and composer installed already you can build this project from the root directory by running:
 
 npm install
+
 composer install
 
+php artisan key:generate
 
 php artisan migrate
 
