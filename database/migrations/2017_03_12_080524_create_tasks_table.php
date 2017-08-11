@@ -21,6 +21,7 @@ class CreateTasksTable extends Migration
             $table->string('state');
             $table->integer('ownerId')->default(0);
             $table->string('status')->default('active');
+            $table->bigInteger('startTime')->default(0);
         });
     }
 

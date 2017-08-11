@@ -114,6 +114,7 @@ class TimerApiController extends Controller
         $duration = (int)Input::get('duration');
         $title = Input::get('name');
         $state = Input::get('status');
+        $startTime = Input::get('startTime');
         $updateHours = false;
 
         if(Input::get('hours') !== null){
@@ -134,7 +135,7 @@ class TimerApiController extends Controller
                 $task->state = $state;
                 $task->duration = $duration;
                 $task->state = $state;
-
+                $task->startTime = $startTime > 0 ? $startTime : 0;
                 if($addHours){
                     $task->duration = 0;
                 }
@@ -160,6 +161,7 @@ class TimerApiController extends Controller
                 $newTask->id = $taskId;
                 $newTask->title = $title;
                 $newTask->state = $state;
+                $newTask->startTime = $startTime > 0 ? $startTime : 0;
 
                 if($addHours){
                     $task->duration = 0;

@@ -51,6 +51,22 @@ class TaskView extends Component {
         }
     }
 
+    addDuration(taskId, currTime, tasks){
+
+        var taskIndex = this.getTaskIndex(taskId, tasks);
+        var diff = (currTime - tasks[taskIndex].startTime);
+
+        if(diff < 1000 && diff >= 500){
+            diff = 1000;
+        }
+
+        diff = Math.floor(diff / 1000);
+
+        tasks[taskIndex].duration += diff;
+
+        return tasks;
+    }
+
     assignColors(tasks){
 
         //Set a color pattern based on the task's position in the list
@@ -99,8 +115,6 @@ class TaskView extends Component {
 
     deleteHoursSucceeded(data){
 
-        console.log("deleteHoursSucceeded ");
-        console.log(data);
         this.getHourInfo();
     }
 
@@ -116,19 +130,6 @@ class TaskView extends Component {
         });
     }
 
-    getTaskIndex(taskId, tasks){
-
-        //Returns task's index in the task list
-        var index = -1;
-
-        for(var i = 0; i < tasks.length; i++){
-            if(tasks[i].id === parseInt(taskId)){
-                index = i;
-            }
-        }
-
-        return index;
-    }
 
     getActiveTask(){
 
@@ -143,6 +144,20 @@ class TaskView extends Component {
         return false;
     }
 
+    getActiveDuration(taskId, tasks){
+
+        //returns the value of a task's duration + the difference in it's timer's start time until now
+        //(Basically, returns the time the front end should display while the task's timer is actively running)
+
+        var currTime = new Date().getTime();
+
+        var taskIndex = this.getTaskIndex(taskId, tasks);
+
+        var diff = Math.floor((currTime - tasks[taskIndex].startTime) / 1000);
+
+        return tasks[taskIndex].duration + diff;
+    }
+
     getHours(){
 
         return this.state.hours;
@@ -154,7 +169,6 @@ class TaskView extends Component {
             method: "GET",
             url: "/api/hours/"+this.state.userId, 
             success: function(data){
-                console.log("here");
                 var newHours = this.parseTimes(data);
                 newHours = this.assignColors(newHours);
                 this.setState({hours: newHours});
@@ -189,6 +203,20 @@ class TaskView extends Component {
 
     }
 
+    getTaskIndex(taskId, tasks){
+
+        //Returns task's index in the task list
+        var index = -1;
+
+        for(var i = 0; i < tasks.length; i++){
+            if(tasks[i].id === parseInt(taskId)){
+                index = i;
+            }
+        }
+
+        return index;
+    }
+
     handleAddTaskButton(e){
 
         //Event when add task button is clicked
@@ -221,9 +249,9 @@ class TaskView extends Component {
         tasks = self.assignColors(tasks);
         tasks = self.parseTimes(tasks);
 
-        self.setState({tasks}, function(){
+        self.setState({tasks:tasks}, function(){
             var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
-            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, 0);
         });
     }
 
@@ -277,23 +305,14 @@ class TaskView extends Component {
         var taskIndex = this.getTaskIndex(taskId, newTasks);
         var newTask = newTasks[taskIndex];
 
-        //Check if newHour is numeric, Format hour to leading zeros if less than 10, and get rid of negative values
-
-        if(isNaN(newHour) || newHour === ""){
-            newHour = isNaN(parseInt(newTask.hour)) ? "00" : newTask.hour;
-            e.target.value = newHour;
-        }
-
-        if(parseInt(newHour) < 0){
-            newHour = "00";
-            e.target.value = newHour;
+        //remove any non numeric characters or empty strings (default to 00)
+        if(newHour.match(/^[0-9]+$/) == null || newHour === ""){
+            newHour = newTask.minute;
         }
 
         newTask.hour = newHour;
-        newTask = this.parseTimeReverse(newTask);
         newTasks[taskIndex] = newTask;
 
-        newTasks = this.parseTimes(newTasks);
 
         this.setState({tasks: newTasks});        
         
@@ -306,7 +325,7 @@ class TaskView extends Component {
 
     handleMinuteChange(e){
 
-        //Event when an task's hour value is edited
+        //Event when an task's minute value is edited
 
         var taskId = $(e.target).attr("data-task");
         var newMinute = e.target.value;
@@ -314,23 +333,13 @@ class TaskView extends Component {
         var taskIndex = this.getTaskIndex(taskId, newTasks);
         var newTask = newTasks[taskIndex];
 
-        //Check if newHour is numeric, Format hour to leading zeros if less than 10, and get rid of negative values
-
-        if(isNaN(newMinute) || newMinute === ""){
-            newMinute = isNaN(parseInt(newTask.minute)) ? "00" : newTask.minute;
-            e.target.value = newMinute;
-        }
-
-        if(parseInt(newMinute) < 0 || parseInt(newMinute) > 59 || newMinute.length > 2){
-            newMinute = isNaN(parseInt(newTask.minute)) ? "00" : newTask.minute;
-            e.target.value = newMinute;
+        //remove any non numeric characters or empty strings (default to 00)
+        if(newMinute.match(/^[0-9]+$/) == null || newMinute === ""){
+            newMinute = newTask.minute;
         }
 
         newTask.minute = newMinute;
-        newTask = this.parseTimeReverse(newTask);
         newTasks[taskIndex] = newTask;
-
-        newTasks = this.parseTimes(newTasks);
 
         this.setState({tasks: newTasks});        
         
@@ -411,46 +420,85 @@ class TaskView extends Component {
         var taskId = $(e.target).attr("data-task");
         var newHour = e.target.value;
         var newTasks = this.state.tasks;
-        var taskIndex = this.getTaskIndex(taskId, newTasks);
+        var taskIndex = self.getTaskIndex(taskId, newTasks);
         var newTask = newTasks[taskIndex];
+        var valid = true;
 
-        if(parseInt(newHour) < 10 && newHour.charAt(0) != '0' || newHour === "0"){
-            newHour = "0" + newHour;
-            e.target.value = newHour;
+        newHour = this.stripLeadingZeroes(newHour);
+
+        if(newHour === ""){
+            newHour = "00";
+            valid = false;
         }
-        else if(parseInt(newHour) > 9 && newHour.charAt(0) == '0'){
-            newHour = newHour.replace(/^0+/, '');
-            e.target.value = newHour;
+
+        if(newHour.match(/^[0-9]+$/) == null){
+            newHour = self.state.tasks[taskIndex].hasOwnProperty("oldHour") ? newTask.oldHour : "00";
+            valid = false;
+        }
+
+        if(parseInt(newHour) < 0){
+            newHour = newTask.hasOwnProperty("oldHour") && newTask.oldHour > 0 ? newTask.oldHour : "00";
+            valid = false;
+        }
+
+        else if(parseInt(newHour) < 10 && newHour.charAt(0) != '0' || newHour === "0"){
+            newHour = "0" + newHour;
+            valid = false;
+        }
+
+        if(valid){
+            newTask.oldHour = newTask.hour;
         }
 
         newTask.hour = newHour;
         newTask = self.parseTimeReverse(newTask);
-        newTasks[self.getTaskIndex(taskId, newTasks)] = newTask;
+        newTasks[taskIndex] = newTask;
 
         newTasks = self.parseTimes(newTasks);
 
-
         self.setState({tasks: newTasks}, function(){
 
-            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, self.state.tasks[taskIndex].startTime);
         });
     }
 
     onMinuteBlur(e){
 
-        //Format minute once focus is left (turn 0's into 00's)
+        //Format minute once focus is left (error check and turn 0's into 00's)
         var self = this;
         var taskId = $(e.target).attr("data-task");
         var newMinute = e.target.value;
         var newTasks = this.state.tasks;
         var taskIndex = self.getTaskIndex(taskId, newTasks);
         var newTask = newTasks[taskIndex];
+        var valid = true;
 
-        if(parseInt(newMinute) < 10 && newMinute.charAt(0) != '0' || newMinute === "0"){
-            newMinute = "0" + newMinute;
-            e.target.value = newMinute;
+        newMinute = this.stripLeadingZeroes(newMinute);
+
+        if(newMinute === ""){
+            newMinute = "00";
+            valid = false;
         }
 
+        if(newMinute.match(/^[0-9]+$/) == null){
+            newMinute = self.state.tasks[taskIndex].hasOwnProperty("oldMinute") ? newTask.oldMinute : "00";
+            valid = false;
+        }
+
+        if(parseInt(newMinute) > 59 || parseInt(newMinute) < 0 || newMinute.length > 2){
+            newMinute = newTask.hasOwnProperty("oldMinute") && newTask.oldMinute > 0 ? newTask.oldMinute : "00";
+            valid = false;
+        }
+
+        else if(parseInt(newMinute) < 10 && newMinute.charAt(0) != '0' || newMinute === "0"){
+            newMinute = "0" + newMinute;
+            valid = false;
+        }
+
+        if(valid){
+            newTask.oldMinute = newTask.minute;
+        }
+        
         newTask.minute = newMinute;
         newTask = self.parseTimeReverse(newTask);
         newTasks[taskIndex] = newTask;
@@ -459,7 +507,7 @@ class TaskView extends Component {
 
         self.setState({tasks: newTasks}, function(){
 
-            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+            self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, self.state.tasks[taskIndex].startTime);
         });
     }
 
@@ -469,7 +517,7 @@ class TaskView extends Component {
         var taskId = $(e.target).attr("data-task");
         var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
 
-        self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, true);
+        self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, self.state.tasks[taskIndex].startTime, true);
     }
 
     parseTimeReverse(task){
@@ -491,8 +539,17 @@ class TaskView extends Component {
 
         for(var i = 0; i < tasks.length; i++){
 
-            tasks[i].hour = Math.floor(tasks[i].duration / 3600);
-            tasks[i].minute = Math.floor((tasks[i].duration % 3600) / 60);
+            var duration = tasks[i].duration;
+
+            if(tasks[i].state === 'play' && tasks[i].hasOwnProperty('startTime') && tasks[i].startTime !== 0){
+
+                //Work with the duration that should be displayed on front end if this task is currently running
+
+                duration = this.getActiveDuration(tasks[i].id, tasks);
+            }
+
+            tasks[i].hour = Math.floor(duration / 3600);
+            tasks[i].minute = Math.floor((duration % 3600) / 60);
         
             if(parseInt(tasks[i].hour) < 10){
                 tasks[i].hour = "0"+tasks[i].hour;
@@ -512,9 +569,10 @@ class TaskView extends Component {
 
         for(var i = 0; i < taskList.length; i++){
             if(taskList[i].state === 'play'){
+
                 taskList[i].state = 'paused';
                 var currTime = new Date().getTime();
-                taskList = this.setTaskTime(i+1, currTime, taskList);
+                taskList = this.updatePausedTask(taskList[i].id, currTime, taskList);
             }         
         }
 
@@ -573,7 +631,7 @@ class TaskView extends Component {
         });
     }
 
-    postTaskUpdate(taskId, title, state, duration, updateHours=false){
+    postTaskUpdate(taskId, title, state, duration, startTime, updateHours=false){
 
         //Post a task's information for updating in the DB
         var self = this;
@@ -583,8 +641,9 @@ class TaskView extends Component {
                 "userId":self.state.userId,
                 "taskId": taskId,
                 "name": title,
-                "status": 'paused',
+                "status": state,
                 "duration": duration,
+                "startTime": startTime,
                 "hours": updateHours
             };
         }
@@ -593,8 +652,9 @@ class TaskView extends Component {
                 "userId":self.state.userId,
                 "taskId": taskId,
                 "name": title,
-                "status": 'paused',
-                "duration": duration
+                "status": state,
+                "duration": duration,
+                "startTime": startTime
             };
         }
 
@@ -681,7 +741,7 @@ class TaskView extends Component {
                                         <input type="text" data-task={task.id} id={"hour-"+task.id }  
                                             onChange={this.handleHourChange.bind(this)}
                                             onBlur={this.onHourBlur.bind(this)}
-                                            defaultValue={task.hour} />
+                                            value={task.hour} />
                                     </div>
                                     <div className="colon"> 
                                         <span className={"animation-colon "+task.state}>:</span>
@@ -690,7 +750,7 @@ class TaskView extends Component {
                                         <input type="text" data-task={task.id} id={"minute-"+task.id }  
                                             onChange={this.handleMinuteChange.bind(this)}
                                             onBlur={this.onMinuteBlur.bind(this)}
-                                            defaultValue={task.minute} />
+                                            value={task.minute} />
                                     </div>
                                 </div>
                             </div>
@@ -722,17 +782,21 @@ class TaskView extends Component {
         }
     }
 
-    setTaskState(taskId, tasks){
+    setTaskState(taskId, currTime, tasks){
 
         var taskIndex = this.getTaskIndex(taskId, tasks);
 
         if(tasks.length > 0){
             if(tasks[taskIndex].state === 'play'){
+
                 tasks[taskIndex].state = 'paused';
+                tasks = this.updatePausedTask(taskId, currTime, tasks);
             }
             else if(tasks[taskIndex].state === 'paused'){
+
                 tasks = this.pauseAllTasks(tasks);
                 tasks[taskIndex].state = 'play';
+                tasks[taskIndex].startTime = currTime;
             }
         }
 
@@ -767,20 +831,30 @@ class TaskView extends Component {
 
     startTimerInterval(taskId){
 
-        if(taskId === this.getActiveTask()){
+        if(this.getTaskIndex(taskId, this.state.tasks) === this.getActiveTask()){
 
             var self = this;
-            var newTasks = self.state.tasks;
-            var currTime = new Date().getTime();
-
-            //The amount of time (in seconds) remaining until the timer should update visually
-            var updateTime = 60 - (newTasks[self.getTaskIndex(taskId, newTasks)].duration % 60);
 
             setTimeout(function(){
-                self.updateTasks("interval", taskId, currTime+(updateTime*1000), newTasks);
-                self.startTimerInterval(taskId);
-            },updateTime*1000);
+
+                self.updateTasks('interval', taskId, new Date().getTime(), self.state.tasks);
+            }, 1000);
         }
+    }
+
+    stripLeadingZeroes(timeString){
+
+        while(timeString.length > 2){
+
+            if(timeString.substring(0,1) === '0'){
+                timeString = timeString.substring(1,timeString.length);
+            }
+            else{
+                break;
+            }
+        }
+
+        return timeString;
     }
 
     submitSucceeded(data){
@@ -809,7 +883,7 @@ class TaskView extends Component {
 
         if(tasks[self.getTaskIndex(taskId, tasks)].state === "play"){
             //self.updateTasks("submitted-playing", taskId, curr, tasks);
-            var newTasks = self.setTaskState(taskId, tasks);
+            var newTasks = self.setTaskState(taskId, curr, tasks);
         }
         else{
             //self.updateTasks("submitted-paused", taskId, curr, tasks);
@@ -822,25 +896,43 @@ class TaskView extends Component {
         self.postTaskHours(taskId, newTasks[self.getTaskIndex(taskId, newTasks)].title, newTasks[self.getTaskIndex(taskId, newTasks)].state, newTasks[self.getTaskIndex(taskId, newTasks)].duration, true);
     }
 
+    updatePausedTask(taskId, currTime, tasks){
+
+        var taskIndex = this.getTaskIndex(taskId, tasks);
+
+        if(tasks[taskIndex].state === 'paused'){
+
+            tasks = this.addDuration(taskId, currTime, tasks);
+            tasks[taskIndex].startTime = 0;
+        }
+        
+        return tasks
+    }
+
     updateTasks(eventName, taskId, currTime, newTasks){
 
         var self = this;
 
         //toggle pause/play if this was caused by clicking the timer button
         if(eventName === "clicked"){
-            newTasks = this.setTaskState(taskId, newTasks);
+            newTasks = this.setTaskState(taskId, currTime, newTasks);
         }
         
         newTasks = this.assignColors(newTasks);
         newTasks = this.parseTimes(newTasks);
 
-        self.setState({tasks: newTasks}, function(){
+        
+
+        this.setState({tasks: newTasks}, function(){
 
             var taskIndex = self.getTaskIndex(taskId, self.state.tasks);
 
             if(eventName === "clicked"){
                 self.startTimerInterval(taskId);
-                self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration);
+                self.postTaskUpdate(taskId, self.state.tasks[taskIndex].title, self.state.tasks[taskIndex].state, self.state.tasks[taskIndex].duration, self.state.tasks[taskIndex].startTime);
+            }
+            else if(eventName === "interval"){
+                self.startTimerInterval(taskId);
             }
         });
     }
