@@ -36,7 +36,7 @@
 
                     <!-- Branding Image -->
                     <a class="navbar-brand" href="{{ url('/') }}">
-                        Time Manager
+                        Time Tracker
                     </a>
                 </div>
 
